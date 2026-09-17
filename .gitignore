@@ -1,0 +1,26 @@
+# Local environments and secrets
+.venv/
+.venv-*/
+venv/
+.env
+.env.*
+!.env.example
+
+# Python runtime files and local data
+__pycache__/
+*.py[cod]
+*.sqlite3
+*.sqlite3-*
+apps/backend/media/
+apps/backend/staticfiles/
+
+# JavaScript dependencies and build outputs
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+
+# Runtime logs and OS files
+*.log
+.DS_Store
+Thumbs.db
