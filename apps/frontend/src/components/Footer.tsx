@@ -1,37 +1,12 @@
 import Link from "next/link";
-import { SITE_NAME } from "@/lib/constants";
+import Icon from "./Icon";
+import { Brand } from "./Header";
 
 export default function Footer() {
-  return (
-    <footer className="border-t border-slate-200 bg-white py-10">
-      <div className="mx-auto grid max-w-6xl gap-6 px-4 sm:grid-cols-3">
-        <div className="space-y-2">
-          <div className="text-lg font-semibold">{SITE_NAME}</div>
-          <p className="text-sm text-slate-600">
-            Fresh, organic groceries with 60/120 minute delivery windows.
-          </p>
-        </div>
-        <div className="space-y-2 text-sm text-slate-700">
-          <div className="font-semibold">Need help?</div>
-          <Link href="/contact" className="block hover:text-emerald-700">
-            Contact
-          </Link>
-          <Link href="/privacy" className="block hover:text-emerald-700">
-            Privacy
-          </Link>
-          <Link href="/return-policy" className="block hover:text-emerald-700">
-            Return policy
-          </Link>
-        </div>
-        <div className="space-y-2 text-sm text-slate-700">
-          <div className="font-semibold">Delivery</div>
-          <div>Dhaka: 60 or 120 minutes</div>
-          <div>Outside: 120 minutes</div>
-        </div>
-      </div>
-      <div className="mt-8 text-center text-xs text-slate-500">
-        © {new Date().getFullYear()} {SITE_NAME}. All rights reserved.
-      </div>
-    </footer>
-  );
+  return <footer className="site-footer"><div className="site-container"><div className="footer-grid">
+    <div className="footer-brand"><Brand /><p className="footer-copy">Your everyday marketplace, bringing local outlets and good finds a little closer to home.</p></div>
+    <div><h2 className="footer-heading">Make yourself at home</h2><div className="footer-links"><Link href="/products">Shop all products</Link><Link href="/outlets">Explore our outlets</Link><Link href="/account/orders">Your orders</Link><Link href="/account">Your account</Link></div></div>
+    <div><h2 className="footer-heading">Here to help</h2><div className="footer-links"><Link href="/contact">Help & contact</Link><Link href="/return-policy">Returns & support</Link><Link href="/privacy">Privacy</Link><Link href="/operations">Seller centre</Link></div></div>
+    <div><h2 className="footer-heading">A simpler way to shop</h2><p className="footer-copy" style={{ marginTop: 0 }}>Explore your options, review delivery at checkout, and pay when your order arrives.</p><div className="footer-pay" style={{ marginTop: 17 }}><Icon name="shield" width={17} height={17} /><span style={{ fontSize: 11 }}>Cash on delivery</span></div></div>
+    </div><div className="footer-bottom"><span>© {new Date().getFullYear()} Subah BD. All rights reserved.</span><span>Made for everyday life in Bangladesh. <span style={{ marginLeft: 12 }}>BDT ৳</span></span></div></div></footer>;
 }

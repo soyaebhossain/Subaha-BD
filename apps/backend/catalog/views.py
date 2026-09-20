@@ -1,8 +1,10 @@
 from rest_framework import filters, permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.db.models import Prefetch, Sum, Q, F
 
-from .models import Category, Product
+from .models import Category, Product, ProductVariant
+from common.pagination import CatalogPagination
 from .serializers import (
     CategorySerializer,
     ProductDetailSerializer,
@@ -18,7 +20,12 @@ class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class ProductViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Product.objects.filter(is_active=True).prefetch_related("variants", "images", "category")
+    pagination_class = CatalogPagination
+    queryset = Product.objects.filter(is_active=True, seller__is_active=True).select_related("category", "seller").prefetch_related(
+        Prefetch("variants", queryset=ProductVariant.objects.filter(is_active=True).annotate(outlet_stock=Sum("inventory__available",
+            filter=Q(inventory__outlet__is_active=True, inventory__outlet__seller__is_active=True,
+                inventory__outlet__seller_id=F("product__seller_id")), default=0))), "images"
+    ).order_by("-created_at", "-id")
     serializer_class = ProductListSerializer
     permission_classes = [permissions.AllowAny]
     lookup_field = "slug"
@@ -38,8 +45,12 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
             qs = qs.filter(category__slug=category)
         delivery_time = self.request.query_params.get("delivery_time")
         if delivery_time == "60":
-            qs = qs.filter(is_featured=True)
+            qs = qs.filter(outlet_inventory__outlet__zone="dhaka", outlet_inventory__outlet__is_active=True,
+                outlet_inventory__available__gt=0, outlet_inventory__outlet__seller_id=F("seller_id")).distinct()
         is_featured = self.request.query_params.get("is_featured")
-        if is_featured:
+        if is_featured in ["1", "true"]:
             qs = qs.filter(is_featured=True)
+        ordering = {"price_asc": "base_price", "price_desc": "-base_price", "newest": "-created_at"}.get(self.request.query_params.get("sort"))
+        if ordering:
+            qs = qs.order_by(ordering, "-id")
         return qs

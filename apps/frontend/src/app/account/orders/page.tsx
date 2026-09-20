@@ -8,40 +8,41 @@ import { getAccessToken } from "@/lib/auth";
 import { Order } from "@/lib/types";
 import { useUserStore } from "@/store/user.store";
 
-const fallbackOrders: Order[] = [
-  { id: 5001, status: "PENDING", total: 1250, delivery_time: "60", zone: "dhaka" },
-  { id: 5002, status: "DELIVERED", total: 980, delivery_time: "120", zone: "outside" },
-];
 
 export default function MyOrdersPage() {
   const storeToken = useUserStore((state) => state.token);
   const token = useMemo(() => storeToken ?? getAccessToken(), [storeToken]);
   const hasAuth = Boolean(token);
-  const [orders, setOrders] = useState<Order[]>(fallbackOrders);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasNext, setHasNext] = useState(false);
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState<boolean>(hasAuth);
 
   useEffect(() => {
     if (!token) return;
     let active = true;
-    getMyOrders(token).then((data) => {
+    getMyOrders(token, page).then((data) => {
       if (!active) return;
-      if (data) setOrders(data);
+      setOrders(data?.results ?? []);
+      setHasNext(Boolean(data?.next));
+      setError(data ? "" : "Could not load orders. Please sign in again or retry.");
       setLoading(false);
     });
     return () => {
       active = false;
     };
-  }, [token]);
+  }, [token, page]);
 
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">My orders</h1>
       <p className="text-sm text-slate-600">
-        Customer view powered by /api/v1/my/orders.
+        Track your purchases and deliveries.
       </p>
       {loading && <div className="text-sm text-slate-600">Loading orders...</div>}
       <div className="space-y-3">
-        {orders.map((order) => (
+        {hasAuth && orders.map((order) => (
           <Link
             key={order.id}
             href={`/account/orders/${order.id}`}
@@ -69,6 +70,11 @@ export default function MyOrdersPage() {
           </div>
         )}
       </div>
+      {hasAuth && <div className="flex items-center justify-between text-sm">
+        <button disabled={page === 1} onClick={() => setPage(page - 1)}>← Previous</button>
+        <span>Page {page}</span><button disabled={!hasNext} onClick={() => setPage(page + 1)}>Next →</button>
+      </div>}
+      {error && <p role="alert" className="text-sm text-amber-800">{error}</p>}
     </div>
   );
 }

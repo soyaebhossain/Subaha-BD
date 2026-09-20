@@ -8,9 +8,25 @@ import {
   Order,
   PaymentInitResponse,
   Product,
+  User,
 } from "./types";
 
 type FetchOptions = RequestInit & { token?: string };
+
+export interface Page<T> { count: number; next: string | null; previous: string | null; results: T[] }
+
+export async function requestJSON<T>(path: string, { token, headers, ...init }: FetchOptions = {}): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...init, cache: "no-store",
+    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...headers },
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    const message = data.detail ?? Object.values(data).flat().join(" ");
+    throw new Error(typeof message === "string" ? message : "Request failed. Please try again.");
+  }
+  return data as T;
+}
 
 async function fetchJSON<T>(
   path: string,
@@ -24,7 +40,7 @@ async function fetchJSON<T>(
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...headers,
       },
-      next: { revalidate: 60 },
+      ...(!token && !init.cache && (!init.method || init.method === "GET") ? { next: { revalidate: 60 } } : { cache: "no-store" as RequestCache }),
     });
 
     if (!res.ok) {
@@ -40,10 +56,21 @@ async function fetchJSON<T>(
 }
 
 export async function getCategories() {
-  return fetchJSON<Category[]>("/api/v1/categories");
+  return fetchJSON<Category[]>("/api/v1/categories/");
+}
+
+export interface Outlet { id: number; name: string; code: string; seller_name: string; seller_kind: string; city: string; country: string; zone: string; is_active: boolean; division: string; district: string; outlet_type: "flagship" | "district"; is_demo: boolean }
+export async function getOutlets(zone = "", page = 1, division = "", outletType = "") {
+  return fetchJSON<Page<Outlet>>(`/api/v1/outlets/?${new URLSearchParams({ page: String(page), zone, division, outlet_type: outletType })}`);
+}
+
+export async function getContentPage(slug: string) {
+  return fetchJSON<{ title_en: string; body_en: string }>(`/api/v1/pages/${encodeURIComponent(slug)}/`);
 }
 
 export interface GetProductsParams {
+  page?: string;
+  page_size?: string;
   search?: string;
   category?: string;
   min?: string;
@@ -54,6 +81,11 @@ export interface GetProductsParams {
 }
 
 export async function getProducts(params: GetProductsParams = {}) {
+  const result = await getProductPage(params);
+  return result?.results ?? null;
+}
+
+export async function getProductPage(params: GetProductsParams = {}) {
   const query = new URLSearchParams(
     Object.entries(params).filter(([, value]) => Boolean(value)) as [
       string,
@@ -62,37 +94,38 @@ export async function getProducts(params: GetProductsParams = {}) {
   );
 
   const qs = query.toString();
-  const path = qs ? `/api/v1/products?${qs}` : "/api/v1/products";
-  return fetchJSON<Product[]>(path);
+  const path = qs ? `/api/v1/products/?${qs}` : "/api/v1/products/";
+  return fetchJSON<Page<Product>>(path);
 }
 
 export async function getProduct(slug: string) {
-  return fetchJSON<Product>(`/api/v1/products/${slug}`);
+  return fetchJSON<Product>(`/api/v1/products/${encodeURIComponent(slug)}/`);
 }
 
 // Auth
 export async function authRegister(payload: AuthPayload) {
-  return fetchJSON<AuthResponse>("/api/v1/auth/register", {
+  const registered = await fetchJSON<User>("/api/v1/auth/register", {
     method: "POST",
     body: JSON.stringify(payload),
     cache: "no-store",
   });
+  return registered ? authLogin(payload) : null;
 }
 
 export async function authLogin(payload: AuthPayload) {
-  return fetchJSON<AuthResponse>("/api/v1/auth/login", {
+  const response = await fetchJSON<{ access: string; refresh: string }>("/api/v1/auth/login", {
     method: "POST",
     body: JSON.stringify(payload),
     cache: "no-store",
   });
+  if (!response?.access) return null;
+  const user = await authMe(response.access);
+  return user ? { token: response.access, user } as AuthResponse : null;
 }
 
 export async function authLogout(token?: string | null) {
-  return fetchJSON<null>("/api/v1/auth/logout", {
-    method: "POST",
-    token: token ?? undefined,
-    cache: "no-store",
-  });
+  void token;
+  return null;
 }
 
 export async function authMe(token?: string | null) {
@@ -109,19 +142,20 @@ export async function quoteCart(body: CartQuoteRequest) {
   });
 }
 
-export async function createOrder(body: unknown) {
-  return fetchJSON<Order>("/api/v1/checkout/create-order", {
+export async function createOrder(body: unknown, token?: string) {
+  return requestJSON<Order>("/api/v1/checkout/create-order", {
+    token,
     method: "POST",
     body: JSON.stringify(body),
   });
 }
 
-export async function getMyOrders(token?: string | null) {
-  return fetchJSON<Order[]>("/api/v1/my/orders", { token });
+export async function getMyOrders(token?: string | null, page = 1) {
+  return fetchJSON<Page<Order>>(`/api/v1/my/orders/?page=${page}`, { token: token ?? undefined });
 }
 
 export async function getMyOrder(id: string, token?: string | null) {
-  return fetchJSON<Order>(`/api/v1/my/orders/${id}`, { token });
+  return fetchJSON<Order>(`/api/v1/my/orders/${id}/`, { token: token ?? undefined });
 }
 
 // Payments

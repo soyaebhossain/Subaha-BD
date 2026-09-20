@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Footer from "@/components/Footer";
+import Header from "@/components/Header";
 import { SITE_NAME } from "@/lib/constants";
 import "./globals.css";
 
@@ -15,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: `${SITE_NAME} | Organic Food`,
-  description: "Single vendor organic food store with 60/120 delivery windows.",
+  title: `${SITE_NAME} | Marketplace`,
+  description: "Shop products from Subah BD outlets and partner sellers.",
 };
 
 export default function RootLayout({
@@ -29,8 +30,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased text-slate-900`}
       >
-        <div className="min-h-screen bg-gradient-to-b from-white to-emerald-50/40">
-          <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
+        <div className="min-h-screen">
+          <Header />
+          <main id="main-content" className="site-container site-main">{children}</main>
           <Footer />
         </div>
       </body>

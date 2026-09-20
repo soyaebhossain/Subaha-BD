@@ -27,12 +27,14 @@ class ProductImageSerializer(serializers.ModelSerializer):
 
 
 class ProductVariantSerializer(serializers.ModelSerializer):
+    stock = serializers.IntegerField(source="outlet_stock", read_only=True, default=0)
     class Meta:
         model = ProductVariant
         fields = ("id", "sku", "weight_label", "stock", "extra_price", "is_active")
 
 
 class ProductListSerializer(serializers.ModelSerializer):
+    seller_name = serializers.CharField(source="seller.name", read_only=True, default="")
     category = CategorySerializer(read_only=True)
     variants = ProductVariantSerializer(many=True, read_only=True)
     images = ProductImageSerializer(many=True, read_only=True)
@@ -41,6 +43,8 @@ class ProductListSerializer(serializers.ModelSerializer):
         model = Product
         fields = (
             "id",
+            "is_demo",
+            "seller_name",
             "category",
             "name_en",
             "name_bn",

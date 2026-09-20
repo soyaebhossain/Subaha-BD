@@ -29,6 +29,8 @@ export interface ProductVariant {
 }
 
 export interface Product {
+  is_demo?: boolean;
+  seller_name?: string;
   id: number;
   category?: Category;
   name_en: string;
@@ -50,6 +52,7 @@ export interface CartLineInput {
 }
 
 export interface CartQuoteRequest {
+  outlet_id?: number;
   items: CartLineInput[];
   zone: Zone;
   delivery_time: DeliveryTime;
@@ -57,6 +60,8 @@ export interface CartQuoteRequest {
 }
 
 export interface CartQuoteResponse {
+  currency?: string;
+  shipments?: number;
   subtotal: number;
   discount: number;
   delivery_fee: number;
@@ -64,14 +69,16 @@ export interface CartQuoteResponse {
 }
 
 export interface OrderItem {
-  product: Product;
-  variant?: ProductVariant;
+  product: number | null;
+  product_name: string;
+  variant?: number | null;
   qty: number;
   price: number;
   total: number;
 }
 
 export interface Order {
+  fulfillments?: { id: number; outlet_name: string; seller_name: string; status: string }[];
   id: number;
   status: string;
   total: number;

@@ -1,19 +1,9 @@
-export default function ContactPage() {
-  return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Contact</h1>
-      <p className="text-sm text-slate-600">
-        Use a support email, phone, or live chat hook. This placeholder can be
-        replaced with CMS content at /api/v1/pages/contact.
-      </p>
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-700 shadow-sm">
-        <div className="space-y-2">
-          <div className="font-semibold text-slate-900">Support</div>
-          <div>Email: support@subahbd.com</div>
-          <div>Phone: +8801XXXXXXXXX</div>
-          <div>Hours: 9:00–22:00</div>
-        </div>
-      </div>
-    </div>
-  );
+import Link from "next/link";
+import Icon from "@/components/Icon";
+import { getContentPage } from "@/lib/api";
+
+export default async function ContactPage() {
+  const page = await getContentPage("contact");
+  const email = process.env.NEXT_PUBLIC_SUPPORT_EMAIL;
+  return <><div className="breadcrumb"><Link href="/">Home</Link><Icon name="chevron" /><span>Help centre</span></div><div className="catalog-top"><div><p className="eyebrow">A little help goes a long way</p><h1 className="page-heading mt-3">How can we help?</h1><p className="page-intro">Find your order, understand delivery, or explore our shopping information.</p></div></div><div className="grid gap-5 md:grid-cols-3">{[{ href: "/account/orders", icon: "box" as const, title: "Find your order", copy: "Sign in to see your latest order and fulfillment status." }, { href: "/outlets", icon: "store" as const, title: "Explore our outlets", copy: "Discover the active outlets in your delivery area." }, { href: "/return-policy", icon: "shield" as const, title: "Returns & support", copy: "Read the published information before you shop." }].map((item) => <Link className="surface-panel" href={item.href} key={item.href}><Icon name={item.icon} /><h2 className="mb-3 mt-6 font-semibold">{item.title}</h2><p className="mb-5 text-xs leading-6 text-slate-500">{item.copy}</p><Icon name="arrow" width={17} height={17} /></Link>)}</div><div className="mt-8 grid gap-8 md:grid-cols-2"><section className="surface-panel"><h2 className="mb-5 text-xl font-semibold tracking-tight">A few helpful answers</h2>{[{ q: "How do I pay for my order?", a: "Cash on delivery is currently available. Your final total is shown at checkout before you place the order." }, { q: "How is delivery calculated?", a: "Delivery is calculated for each outlet preparing your items. Choose your delivery zone and calculate the total at checkout." }, { q: "Will everything arrive together?", a: "Products from different outlets may be sent separately. Your order details show each fulfillment and its status." }].map((item) => <details key={item.q} className="border-t border-slate-200 py-4"><summary className="cursor-pointer text-xs font-semibold">{item.q}</summary><p className="mt-3 text-xs leading-7 text-slate-500">{item.a}</p></details>)}</section><section className="surface-panel"><h2 className="mb-5 text-xl font-semibold tracking-tight">Get in touch</h2>{page?.body_en ? <p className="whitespace-pre-wrap text-sm leading-8 text-slate-600">{page.body_en}</p> : <p className="text-sm leading-8 text-slate-500">Our direct support contact details will be listed here as they become available. For an existing order, keep your order number handy.</p>}{email && <a href={`mailto:${email}`} className="text-link mt-6">{email}<Icon name="arrow" /></a>}</section></div></>;
 }

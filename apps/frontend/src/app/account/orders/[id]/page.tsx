@@ -8,29 +8,6 @@ import { getAccessToken } from "@/lib/auth";
 import { Order } from "@/lib/types";
 import { useUserStore } from "@/store/user.store";
 
-const fallbackOrder: Order = {
-  id: 9999,
-  status: "PENDING",
-  total: 1250,
-  subtotal: 1100,
-  delivery_fee: 80,
-  discount: 0,
-  delivery_time: "60",
-  zone: "dhaka",
-  items: [
-    {
-      product: {
-        id: 1,
-        name_en: "Sample product",
-        slug: "sample",
-        base_price: 550,
-      },
-      qty: 2,
-      price: 550,
-      total: 1100,
-    },
-  ],
-};
 
 export default function OrderDetailPage() {
   const params = useParams<{ id: string }>();
@@ -45,7 +22,7 @@ export default function OrderDetailPage() {
     let active = true;
     getMyOrder(String(params.id), token).then((data) => {
       if (!active) return;
-      setOrder(data ?? fallbackOrder);
+      setOrder(data);
       setLoading(false);
     });
     return () => {
@@ -111,12 +88,12 @@ export default function OrderDetailPage() {
           {order.items?.length ? (
             order.items.map((item, idx) => (
               <div
-                key={`${item.product.id}-${idx}`}
+                key={`${item.product}-${idx}`}
                 className="flex items-center justify-between text-sm"
               >
                 <div>
                   <div className="font-semibold text-slate-900">
-                    {item.product.name_en}
+                    {item.product_name || "Product"}
                   </div>
                   <div className="text-xs text-slate-500">Qty {item.qty}</div>
                 </div>
@@ -128,6 +105,7 @@ export default function OrderDetailPage() {
           )}
         </div>
       </div>
+      <div className="space-y-2">{order.fulfillments?.map((shipment) => <div key={shipment.id} className="rounded-xl border bg-white p-4 text-sm">{shipment.seller_name} · {shipment.outlet_name} <span className="ml-3 font-semibold">{shipment.status}</span></div>)}</div>
     </div>
   );
 }

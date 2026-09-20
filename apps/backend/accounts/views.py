@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import permissions, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .models import Address
 from .serializers import AddressSerializer, RegisterSerializer, UserSerializer
@@ -9,7 +10,12 @@ from .serializers import AddressSerializer, RegisterSerializer, UserSerializer
 User = get_user_model()
 
 
+class LoginView(TokenObtainPairView):
+    throttle_scope = "auth"
+
+
 class RegisterView(APIView):
+    throttle_scope = "auth"
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):

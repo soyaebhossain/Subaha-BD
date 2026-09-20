@@ -1,82 +1,18 @@
 import Link from "next/link";
 import ProductCard from "@/components/ProductCard";
 import ProductFilters from "@/components/ProductFilters";
-import { getCategories, getProducts } from "@/lib/api";
-import { Category, Product } from "@/lib/types";
+import Icon from "@/components/Icon";
+import { getCategories, getProductPage } from "@/lib/api";
 
-const fallbackProducts: Product[] = [
-  {
-    id: 101,
-    name_en: "Mango (organic)",
-    slug: "organic-mango",
-    base_price: 320,
-    variants: [{ id: 1011, weight_label: "1kg", extra_price: 0 }],
-    images: [{ url: "https://images.unsplash.com/photo-1502741338009-cac2772e18bc" }],
-  },
-  {
-    id: 102,
-    name_en: "Free-range eggs",
-    slug: "free-range-eggs",
-    base_price: 180,
-    variants: [{ id: 1021, weight_label: "12 pcs", extra_price: 0 }],
-    images: [{ url: "https://images.unsplash.com/photo-1511690743698-d9d85f2fbf38" }],
-  },
-];
-
-const fallbackCategories: Category[] = [
-  { id: 1, name_en: "Vegetables", slug: "vegetables" },
-  { id: 2, name_en: "Fruits", slug: "fruits" },
-  { id: 3, name_en: "Pantry", slug: "pantry" },
-];
-
-interface Props {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}
-
-export default async function ProductsPage({ searchParams }: Props) {
-  const resolvedSearchParams = await searchParams;
-  const params = Object.fromEntries(
-    Object.entries(resolvedSearchParams)
-      .map(([key, value]) => [key, Array.isArray(value) ? value[0] : value])
-      .filter(([, value]) => Boolean(value)),
-  );
-
-  const [products, categories] = await Promise.all([
-    getProducts(params),
-    getCategories(),
-  ]);
-  const list = products ?? fallbackProducts;
-  const categoryOptions = categories ?? fallbackCategories;
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Products</h1>
-          <p className="text-sm text-slate-600">
-            Search, filter by category, delivery time, or sort by price.
-          </p>
-        </div>
-        <Link
-          href="/cart"
-          className="rounded-full border border-emerald-600 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50"
-        >
-          View cart
-        </Link>
-      </div>
-
-      <ProductFilters categories={categoryOptions} />
-
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {list.map((product) => (
-          <ProductCard key={product.slug} product={product} />
-        ))}
-        {list.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-6 text-sm text-slate-600">
-            No products found for the applied filters.
-          </div>
-        )}
-      </div>
-    </div>
-  );
+export default async function ProductsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const query = await searchParams;
+  const params: Record<string, string> = {};
+  for (const [key, value] of Object.entries(query)) if (value) params[key] = Array.isArray(value) ? value[0] : value;
+  const [products, categories] = await Promise.all([getProductPage(params), getCategories()]);
+  const page = Math.max(1, Number(params.page) || 1);
+  const pageLink = (value: number) => `/products?${new URLSearchParams({ ...params, page: String(value) })}`;
+  return <><div className="breadcrumb"><Link href="/">Home</Link><Icon name="chevron" /><span>Marketplace</span></div><div className="catalog-top"><div><p className="eyebrow">Your everyday discoveries</p><h1 className="page-heading mt-3">Find a little of everything.</h1><p className="page-intro">Browse good finds from our outlets and partner sellers.</p></div><span className="section-kicker">{products?.count ?? 0} products to explore</span></div>{products?.results.some(p => p.is_demo) && <p className="demo-notice mb-5">Explore our demo catalogue. Sample prices, stock and illustrations will be replaced with verified product information before launch.</p>}<ProductFilters categories={categories || []} />
+    {products?.results.length ? <div className="product-grid">{products.results.map((product) => <ProductCard key={product.id} product={product} />)}</div> : <div className="empty-state"><span className="empty-icon"><Icon name={products ? "search" : "box"} /></span><h2>{products ? "No finds here just yet." : "The shelves are taking a moment."}</h2><p>{products ? "Try a different search or clear your filters to explore the rest of the marketplace." : "We couldn’t load the catalogue. Please refresh in a moment."}</p><Link href="/products" className="button-secondary">{products ? "Browse all products" : "Try again"}<Icon name="arrow" width={15} height={15} /></Link></div>}
+    {(products?.count || 0) > 0 && <nav className="pagination-bar" aria-label="Product pages">{products?.previous ? <Link href={pageLink(page - 1)}>← Previous</Link> : <span />}<span>Page {page} · {products?.count} products</span>{products?.next ? <Link href={pageLink(page + 1)}>Next →</Link> : <span />}</nav>}
+  </>;
 }

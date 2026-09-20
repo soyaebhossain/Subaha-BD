@@ -47,6 +47,7 @@ export const useCartStore = create<CartState>()(
           if (existing) {
             return {
               ...state,
+              quote: null,
               items: state.items.map((line) =>
                 line.id === existing.id
                   ? { ...line, qty: line.qty + item.qty }
@@ -60,7 +61,7 @@ export const useCartStore = create<CartState>()(
               ? crypto.randomUUID()
               : Math.random().toString(36).slice(2);
 
-          return { ...state, items: [...state.items, { ...item, id }] };
+          return { ...state, quote: null, items: [...state.items, { ...item, id }] };
         }),
       updateQty: (id, qty) =>
         set((state) => ({
@@ -68,15 +69,17 @@ export const useCartStore = create<CartState>()(
           items: state.items
             .map((line) => (line.id === id ? { ...line, qty } : line))
             .filter((line) => line.qty > 0),
+          quote: null,
         })),
       removeItem: (id) =>
         set((state) => ({
           ...state,
           items: state.items.filter((line) => line.id !== id),
+          quote: null,
         })),
       clear: () => set({ items: [], quote: null }),
-      setZone: (zone) => set({ zone }),
-      setDeliveryTime: (deliveryTime) => set({ deliveryTime }),
+      setZone: (zone) => set((state) => ({ zone, quote: null, deliveryTime: zone === "outside" ? "120" : state.deliveryTime })),
+      setDeliveryTime: (deliveryTime) => set({ deliveryTime, quote: null }),
       setQuote: (quote) => set({ quote }),
     }),
     {

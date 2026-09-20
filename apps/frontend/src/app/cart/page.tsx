@@ -1,101 +1,15 @@
 'use client';
 
+import Image from "next/image";
 import Link from "next/link";
 import Price from "@/components/Price";
-import {
-  calculateSubtotal,
-  useCartStore,
-} from "@/store/cart.store";
+import Icon from "@/components/Icon";
+import { calculateSubtotal, useCartStore } from "@/store/cart.store";
 
 export default function CartPage() {
-  const items = useCartStore((state) => state.items);
-  const updateQty = useCartStore((state) => state.updateQty);
-  const removeItem = useCartStore((state) => state.removeItem);
-  const clear = useCartStore((state) => state.clear);
-
+  const { items, updateQty, removeItem } = useCartStore();
   const subtotal = calculateSubtotal(items);
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Cart</h1>
-          <p className="text-sm text-slate-600">
-            Review your cart before checkout.
-          </p>
-        </div>
-        {items.length > 0 && (
-          <button
-            type="button"
-            onClick={clear}
-            className="text-sm font-semibold text-emerald-700 underline-offset-4 hover:underline"
-          >
-            Clear cart
-          </button>
-        )}
-      </div>
-
-      {items.length === 0 && (
-        <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-6 text-sm text-slate-600">
-          Your cart is empty.{" "}
-          <Link href="/products" className="font-semibold text-emerald-700">
-            Browse products
-          </Link>
-          .
-        </div>
-      )}
-
-      <div className="space-y-3">
-        {items.map((item) => (
-          <div
-            key={item.id}
-            className="flex flex-col justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center"
-          >
-            <div>
-              <div className="text-sm font-semibold text-slate-900">
-                {item.name}
-              </div>
-              <div className="text-xs text-slate-500">
-                {item.variantLabel ?? "Standard"} • BDT {item.price}
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <input
-                type="number"
-                min={1}
-                value={item.qty}
-                onChange={(e) => updateQty(item.id, Number(e.target.value))}
-                className="w-20 rounded border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
-              />
-              <Price amount={item.price * item.qty} className="font-semibold" />
-              <button
-                type="button"
-                onClick={() => removeItem(item.id)}
-                className="text-xs font-semibold text-rose-600"
-              >
-                Remove
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {items.length > 0 && (
-        <div className="flex items-center justify-between rounded-2xl border border-emerald-100 bg-white px-4 py-3 text-sm shadow-sm">
-          <div className="space-y-1">
-            <div className="text-xs uppercase tracking-wide text-emerald-700">
-              Subtotal
-            </div>
-            <Price amount={subtotal} className="text-lg font-bold" />
-          </div>
-          <Link
-            href="/checkout"
-            className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
-          >
-            Go to checkout
-          </Link>
-        </div>
-      )}
-    </div>
-  );
+  return <><div className="breadcrumb"><Link href="/">Home</Link><Icon name="chevron" /><Link href="/products">Marketplace</Link><Icon name="chevron" /><span>Shopping bag</span></div><div className="catalog-top"><div><p className="eyebrow">Your everyday picks</p><h1 className="page-heading mt-3">A bag full of good things.</h1><p className="page-intro">A final look before we bring it all together.</p></div><Link href="/products" className="text-link">Continue exploring <Icon name="arrow" /></Link></div>
+    {!items.length ? <div className="empty-state"><span className="empty-icon"><Icon name="bag" /></span><h2>Your next favourite is waiting.</h2><p>Your shopping bag is empty. Explore the marketplace and add something you love.</p><Link href="/products" className="button-primary">Let’s go shopping <Icon name="arrow" width={16} height={16} /></Link></div> : <div className="cart-layout"><section aria-label="Bag items"><div className="flex justify-between border-b border-slate-200 pb-4 text-xs text-slate-500"><span>{items.reduce((sum, item) => sum + item.qty, 0)} items in your bag</span><span>Price</span></div>{items.map((item) => <article key={item.id} className="cart-item"><div className="cart-thumbnail">{item.image ? <Image src={item.image} alt="" fill sizes="92px" className="object-cover" /> : <Icon name="box" width={30} height={30} />}</div><div className="cart-item-info"><h2>{item.name}</h2><small>{item.variantLabel || "Standard pack"} · <Price amount={item.price} /></small><div className="quantity-control"><button aria-label={`Decrease ${item.name} quantity`} disabled={item.qty <= 1} onClick={() => updateQty(item.id, item.qty - 1)}><Icon name="minus" /></button><span aria-live="polite">{item.qty}</span><button aria-label={`Increase ${item.name} quantity`} disabled={item.qty >= 100} onClick={() => updateQty(item.id, item.qty + 1)}><Icon name="plus" /></button></div></div><div className="cart-item-price"><Price amount={item.price * item.qty} /><button onClick={() => removeItem(item.id)} aria-label={`Remove ${item.name}`}>Remove</button></div></article>)}</section><aside className="order-summary"><h2>Your order summary</h2><div className="summary-line"><span>Subtotal</span><Price amount={subtotal} /></div><div className="summary-line"><span>Delivery</span><span>Calculated at checkout</span></div><div className="summary-total"><span>Subtotal</span><Price amount={subtotal} /></div><Link href="/checkout" className="button-primary w-full">Continue to checkout <Icon name="arrow" width={16} height={16} /></Link><p className="summary-footnote">Final prices and outlet availability are confirmed at checkout. Pay in cash when your order arrives.</p><div className="mt-5 flex items-center justify-center gap-2 border-t border-slate-200 pt-5 text-xs text-emerald-700"><Icon name="shield" width={16} height={16} />Cash on delivery</div></aside></div>}
+  </>;
 }

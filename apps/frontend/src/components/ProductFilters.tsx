@@ -1,109 +1,19 @@
 'use client';
 
-import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Category, SortOption } from "@/lib/types";
+import { FormEvent } from "react";
+import { Category } from "@/lib/types";
+import Icon from "./Icon";
 
-interface Props {
-  categories: Category[];
-}
-
-const sortOptions: { value: SortOption; label: string }[] = [
-  { value: "newest", label: "Newest" },
-  { value: "price_asc", label: "Price: Low to High" },
-  { value: "price_desc", label: "Price: High to Low" },
-];
-
-export default function ProductFilters({ categories }: Props) {
+export default function ProductFilters({ categories }: { categories: Category[] }) {
   const router = useRouter();
   const search = useSearchParams();
-
-  const [searchText, setSearchText] = useState(search.get("search") ?? "");
-  const [category, setCategory] = useState(search.get("category") ?? "");
-  const [deliveryTime, setDeliveryTime] = useState(
-    search.get("delivery_time") ?? "",
-  );
-  const [sort, setSort] = useState<SortOption | "">(
-    (search.get("sort") as SortOption) ?? "",
-  );
-
-  function applyFilters() {
-    const params = new URLSearchParams();
-    if (searchText) params.set("search", searchText);
-    if (category) params.set("category", category);
-    if (deliveryTime) params.set("delivery_time", deliveryTime);
-    if (sort) params.set("sort", sort);
-    const qs = params.toString();
-    router.push(qs ? `/products?${qs}` : "/products");
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const query = new URLSearchParams();
+    for (const [key, value] of data.entries()) if (String(value).trim()) query.set(key, String(value).trim());
+    router.push(`/products?${query}`);
   }
-
-  function clearFilters() {
-    setSearchText("");
-    setCategory("");
-    setDeliveryTime("");
-    setSort("");
-    router.push("/products");
-  }
-
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="grid gap-3 md:grid-cols-4">
-        <input
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          placeholder="Search products"
-          className="w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
-        />
-        <select
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          className="w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
-        >
-          <option value="">All categories</option>
-          {categories.map((cat) => (
-            <option key={cat.slug} value={cat.slug}>
-              {cat.name_en}
-            </option>
-          ))}
-        </select>
-        <select
-          value={deliveryTime}
-          onChange={(e) => setDeliveryTime(e.target.value)}
-          className="w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
-        >
-          <option value="">Any delivery time</option>
-          <option value="60">60 min</option>
-          <option value="120">120 min</option>
-        </select>
-        <select
-          value={sort}
-          onChange={(e) => setSort(e.target.value as SortOption)}
-          className="w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
-        >
-          <option value="">Sort</option>
-          {sortOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="mt-3 flex items-center justify-end gap-3 text-sm">
-        <button
-          type="button"
-          onClick={clearFilters}
-          className="rounded-full border border-slate-300 px-4 py-2 font-semibold text-slate-700 hover:bg-slate-50"
-        >
-          Clear
-        </button>
-        <button
-          type="button"
-          onClick={applyFilters}
-          className="rounded-full bg-emerald-600 px-4 py-2 font-semibold text-white hover:bg-emerald-700"
-        >
-          Apply
-        </button>
-      </div>
-    </div>
-  );
+  return <form key={search.toString()} onSubmit={submit} className="filter-panel" aria-label="Filter products"><div className="filter-controls"><input aria-label="Search catalogue" name="search" defaultValue={search.get("search") || ""} placeholder="What are you looking for?" className="filter-field" maxLength={150} /><select aria-label="Product category" name="category" defaultValue={search.get("category") || ""} className="filter-field"><option value="">All categories</option>{categories.map((category) => <option key={category.id} value={category.slug}>{category.name_en}</option>)}</select><select aria-label="Sort products" name="sort" defaultValue={search.get("sort") || "newest"} className="filter-field"><option value="newest">Newest arrivals</option><option value="price_asc">Price: low to high</option><option value="price_desc">Price: high to low</option></select><button className="button-primary"><Icon name="filter" width={15} height={15} />Apply filters</button></div>{(search.get("search") || search.get("category")) && <div className="mt-3 flex items-center justify-between text-xs text-slate-500"><span>Showing your selected filters</span><button type="button" onClick={() => router.push("/products")} className="text-link">Clear filters <Icon name="close" width={13} height={13} /></button></div>}</form>;
 }

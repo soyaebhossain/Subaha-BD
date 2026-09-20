@@ -1,189 +1,30 @@
 'use client';
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
-import { authLogin, authLogout, authMe, authRegister } from "@/lib/api";
+import Image from "next/image";
+import { FormEvent, useState } from "react";
+import { authLogin, authRegister } from "@/lib/api";
 import { clearAccessToken, setAccessToken } from "@/lib/auth";
 import { useUserStore } from "@/store/user.store";
-
-type Mode = "login" | "register";
+import Icon from "@/components/Icon";
 
 export default function AccountPage() {
-  const user = useUserStore((state) => state.user);
-  const token = useUserStore((state) => state.token);
-  const setAuth = useUserStore((state) => state.setAuth);
-  const setUser = useUserStore((state) => state.setUser);
-  const logoutStore = useUserStore((state) => state.logout);
-
-  const [mode, setMode] = useState<Mode>("login");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
-  const [message, setMessage] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const loadingProfile = Boolean(token && !user);
-
-  useEffect(() => {
-    if (!token || user) return;
-    let active = true;
-    authMe(token).then((data) => {
-      if (!active) return;
-      if (data) setUser(data);
-    });
-    return () => {
-      active = false;
-    };
-  }, [token, user, setUser]);
-
-  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setMessage(null);
-    const payload = { email, password, name };
-
-    const response =
-      mode === "login" ? await authLogin(payload) : await authRegister(payload);
-
-    if (response?.token && response?.user) {
-      setAuth(response.token, response.user);
-      setAccessToken(response.token);
-      setMessage("Signed in.");
-      setPassword("");
-    } else {
-      setMessage("Could not authenticate. Please check credentials.");
-    }
-    setIsSubmitting(false);
+  const { user, setAuth, logout } = useUserStore();
+  const [mode, setMode] = useState<"login" | "register">("login");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true); setMessage("");
+    const data = new FormData(event.currentTarget);
+    const payload = { email: String(data.get("email")), password: String(data.get("password")), name: String(data.get("name") || "") };
+    try {
+      const result = mode === "login" ? await authLogin(payload) : await authRegister(payload);
+      if (result) { setAuth(result.token, result.user); setAccessToken(result.token); }
+      else setMessage(mode === "login" ? "We couldn’t sign you in. Check your email and password, then try again." : "We couldn’t create this account. Use an unregistered email and a strong password with at least 8 characters.");
+    } catch { setMessage("We couldn’t connect just now. Please try again shortly."); }
+    finally { setBusy(false); }
   }
-
-  async function handleLogout() {
-    if (token) {
-      await authLogout(token);
-    }
-    logoutStore();
-    clearAccessToken();
-    setMessage("Signed out.");
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Account</h1>
-          <p className="text-sm text-slate-600">
-            Sign in to manage your orders and checkout faster.
-          </p>
-        </div>
-        <Link
-          href="/account/orders"
-          className="rounded-full border border-emerald-600 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50"
-        >
-          My orders
-        </Link>
-      </div>
-
-      {user ? (
-        <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm font-semibold text-slate-900">
-                {user.name ?? "Customer"}
-              </div>
-              <div className="text-xs text-slate-500">{user.email}</div>
-            </div>
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-            >
-              Sign out
-            </button>
-          </div>
-          <div className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-            Signed in. Your orders and checkout will use this profile.
-          </div>
-        </div>
-      ) : (
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center gap-3 text-sm font-semibold">
-            <button
-              type="button"
-              onClick={() => setMode("login")}
-              className={`rounded-full px-3 py-1 ${
-                mode === "login"
-                  ? "bg-emerald-600 text-white"
-                  : "text-slate-700 hover:bg-slate-100"
-              }`}
-            >
-              Login
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode("register")}
-              className={`rounded-full px-3 py-1 ${
-                mode === "register"
-                  ? "bg-emerald-600 text-white"
-                  : "text-slate-700 hover:bg-slate-100"
-              }`}
-            >
-              Register
-            </button>
-          </div>
-
-          <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-            {mode === "register" && (
-              <label className="space-y-1 text-sm">
-                <span className="text-slate-700">Name</span>
-                <input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
-                  placeholder="Your name"
-                  required
-                />
-              </label>
-            )}
-            <label className="space-y-1 text-sm">
-              <span className="text-slate-700">Email</span>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
-                placeholder="you@example.com"
-                required
-              />
-            </label>
-            <label className="space-y-1 text-sm">
-              <span className="text-slate-700">Password</span>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
-                placeholder="********"
-                required
-              />
-            </label>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-            >
-              {isSubmitting
-                ? "Processing..."
-                : mode === "login"
-                  ? "Login"
-                  : "Create account"}
-            </button>
-            {loadingProfile && (
-              <p className="text-xs text-slate-500">Loading profile...</p>
-            )}
-            {message && (
-              <p className="text-xs font-medium text-amber-700">{message}</p>
-            )}
-          </form>
-        </div>
-      )}
-    </div>
-  );
+  if (user) return <><div className="breadcrumb"><Link href="/">Home</Link><Icon name="chevron" /><span>Your account</span></div><div className="catalog-top"><div><p className="eyebrow">Your little corner</p><h1 className="page-heading mt-3">Hello, {user.name?.split(" ")[0] || "there"}.</h1><p className="page-intro">It’s good to have you here.</p></div><button className="button-secondary" onClick={() => { logout(); clearAccessToken(); }}>Sign out</button></div><div className="surface-panel mb-6"><p className="font-semibold">{user.name || "Your account"}</p><p className="mt-1 text-sm text-slate-500">{user.email}</p><p className="mt-5 text-xs text-emerald-700">Signed in. Your orders and checkout will use this profile.</p></div><div className="grid gap-5 md:grid-cols-3">{[{ icon: "box" as const, title: "Your orders", copy: "Follow every pick from outlet to doorstep.", href: "/account/orders" }, { icon: "bag" as const, title: "Your shopping bag", copy: "Pick up where you left off.", href: "/cart" }, { icon: "store" as const, title: "Seller & outlet operations", copy: "Your workspace for stock and fulfillment.", href: "/operations" }].map((item) => <Link href={item.href} key={item.href} className="surface-panel hover:border-emerald-200"><Icon name={item.icon} /><h2 className="mb-2 mt-6 font-semibold">{item.title}</h2><p className="mb-5 text-xs text-slate-500">{item.copy}</p><Icon name="arrow" width={18} height={18} /></Link>)}</div></>;
+  return <div className="mx-auto grid max-w-5xl overflow-hidden rounded-2xl border border-slate-200 bg-white md:grid-cols-2"><div className="relative hidden min-h-[610px] overflow-hidden bg-[#e5e8f0] md:block"><div className="relative z-10 p-10"><p className="eyebrow">Good things, closer</p><h2 className="mt-7 text-4xl font-medium leading-tight tracking-[-1.5px]">Your everyday.<br />A little more lovely.</h2><p className="mt-4 max-w-xs text-sm leading-7 text-slate-500">Keep your favourites close and your orders in one place.</p></div><Image src="/images/market-basket.png" alt="Fresh everyday groceries" fill sizes="500px" className="object-contain object-bottom pt-64 mix-blend-multiply" /></div><div className="p-7 sm:p-12"><Link href="/" className="text-link mb-9">← Back to the marketplace</Link><p className="section-kicker">Your Subah BD account</p><h1 className="mt-3 text-3xl font-semibold tracking-tight">{mode === "login" ? "Welcome back." : "Make yourself at home."}</h1><p className="mt-3 text-xs leading-6 text-slate-500">{mode === "login" ? "Sign in to track your orders and make checkout simpler." : "Create your account for a more connected shopping experience."}</p><div className="mb-7 mt-7 grid grid-cols-2 rounded-lg bg-slate-50 p-1">{(["login", "register"] as const).map((value) => <button key={value} onClick={() => { setMode(value); setMessage(""); }} className={`rounded-md py-2.5 text-xs font-semibold ${mode === value ? "bg-white text-emerald-700 shadow-sm" : "text-slate-500"}`}>{value === "login" ? "Login" : "Create account"}</button>)}</div><form key={mode} onSubmit={submit} className="space-y-5">{mode === "register" && <label className="block text-xs font-medium">Full name<input name="name" autoComplete="name" required maxLength={255} className="filter-field mt-2" placeholder="Your name" /></label>}<label className="block text-xs font-medium">Email<input name="email" type="email" autoComplete="email" required className="filter-field mt-2" placeholder="you@example.com" /></label><label className="block text-xs font-medium">Password<input name="password" type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} required minLength={mode === "register" ? 8 : undefined} className="filter-field mt-2" placeholder={mode === "register" ? "Create a strong password" : "Your password"} /></label>{message && <p role="alert" className="rounded-lg bg-amber-50 p-3 text-xs leading-6 text-amber-800">{message}</p>}<button disabled={busy} className="button-primary w-full">{busy ? "Please wait…" : mode === "login" ? "Login" : "Create account"}<Icon name="arrow" width={16} height={16} /></button><p className="text-center text-[10px] leading-5 text-slate-500">Read how we handle your information in our <Link className="underline" href="/privacy">privacy notice</Link>.</p></form></div></div>;
 }

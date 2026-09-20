@@ -5,45 +5,38 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Order
-from .serializers import OrderCreateSerializer, OrderSerializer
+from .serializers import CartQuoteSerializer, OrderCreateSerializer, OrderSerializer
+from .services import plan_cart
+from common.pagination import CatalogPagination
 
 
 class CartQuoteView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        items = request.data.get("items", [])
-        zone = request.data.get("zone", "dhaka")
-        delivery_time = request.data.get("delivery_time", "120")
-        subtotal = sum(
-            Decimal(str(item.get("price", 0))) * int(item.get("qty", 1)) for item in items
-        )
-        delivery_fee = Decimal("80") if zone == "dhaka" else Decimal("120")
-        if delivery_time == "60" and zone == "dhaka":
-            delivery_fee += Decimal("20")
-        return Response(
-            {
-                "subtotal": subtotal,
-                "discount": Decimal("0"),
-                "delivery_fee": delivery_fee,
-                "total": subtotal + delivery_fee,
-            }
-        )
+        serializer = CartQuoteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        _, totals = plan_cart(serializer.validated_data)
+        return Response(totals)
 
 
 class CheckoutCreateOrderView(APIView):
+    throttle_scope = "checkout"
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
         serializer = OrderCreateSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         order = serializer.save()
-        return Response(OrderSerializer(order).data, status=201)
+        return Response(OrderSerializer(order).data, status=201 if serializer.was_created else 200)
 
 
 class MyOrdersViewSet(viewsets.ReadOnlyModelViewSet):
+    pagination_class = CatalogPagination
     serializer_class = OrderSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Order.objects.filter(user=self.request.user).order_by("-created_at")
+        return Order.objects.filter(user=self.request.user).prefetch_related(
+            "items__variant", "fulfillments__outlet__seller", "fulfillments__items__variant"
+        ).order_by("-created_at", "-id")

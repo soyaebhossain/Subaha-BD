@@ -7,9 +7,6 @@ export const API_BASE =
 export const DELIVERY_TIMES: DeliveryTime[] = ["60", "120"];
 export const ZONES: Zone[] = ["dhaka", "outside"];
 export const PAYMENT_METHODS: PaymentMethod[] = [
-  "sslcommerz",
-  "bkash",
-  "nagad",
   "cod",
 ];
 

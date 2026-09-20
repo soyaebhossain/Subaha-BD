@@ -1,4 +1,6 @@
 from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
 from .models import Address
@@ -19,6 +21,13 @@ class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ("email", "name", "password")
+
+    def validate(self, attrs):
+        try:
+            validate_password(attrs["password"], User(email=attrs["email"], name=attrs.get("name", "")))
+        except DjangoValidationError as error:
+            raise serializers.ValidationError({"password": error.messages})
+        return attrs
 
     def create(self, validated_data):
         password = validated_data.pop("password")

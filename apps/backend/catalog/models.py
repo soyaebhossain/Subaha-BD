@@ -21,6 +21,8 @@ class Category(TimestampedModel):
 
 
 class Product(TimestampedModel):
+    is_demo = models.BooleanField(default=False)
+    seller = models.ForeignKey("marketplace.Seller", null=True, blank=True, on_delete=models.PROTECT, related_name="products")
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, related_name="products")
     name_en = models.CharField(max_length=255)
     name_bn = models.CharField(max_length=255, blank=True)

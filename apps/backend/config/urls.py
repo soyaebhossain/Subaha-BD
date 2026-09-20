@@ -5,10 +5,12 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from accounts.views import AddressViewSet, MeView, RegisterView
+from accounts.views import AddressViewSet, MeView, RegisterView, LoginView
 from catalog.views import CategoryViewSet, ProductViewSet
 from cms.views import BannerViewSet, PageViewSet
 from orders.views import CartQuoteView, CheckoutCreateOrderView, MyOrdersViewSet
+from marketplace.views import OutletViewSet, OperationsOutletViewSet, InventoryViewSet, FulfillmentViewSet, OverviewView
+from common.views_health import live, ready
 from payments.views import (
     BkashCreateView,
     BkashExecuteView,
@@ -21,6 +23,10 @@ from payments.views import (
 )
 
 router = DefaultRouter()
+router.register(r"outlets", OutletViewSet, basename="outlet")
+router.register(r"operations/outlets", OperationsOutletViewSet, basename="operations-outlet")
+router.register(r"operations/inventory", InventoryViewSet, basename="operations-inventory")
+router.register(r"operations/fulfillments", FulfillmentViewSet, basename="operations-fulfillment")
 router.register(r"categories", CategoryViewSet, basename="category")
 router.register(r"products", ProductViewSet, basename="product")
 router.register(r"pages", PageViewSet, basename="page")
@@ -29,9 +35,12 @@ router.register(r"my/orders", MyOrdersViewSet, basename="my-orders")
 router.register(r"addresses", AddressViewSet, basename="address")
 
 urlpatterns = [
+    path("health/live", live),
+    path("health/ready", ready),
+    path("api/v1/operations/overview", OverviewView.as_view()),
     path("admin/", admin.site.urls),
     path("api/v1/auth/register", RegisterView.as_view(), name="auth-register"),
-    path("api/v1/auth/login", TokenObtainPairView.as_view(), name="auth-login"),
+    path("api/v1/auth/login", LoginView.as_view(), name="auth-login"),
     path("api/v1/auth/refresh", TokenRefreshView.as_view(), name="auth-refresh"),
     path("api/v1/auth/me", MeView.as_view(), name="auth-me"),
     path("api/v1/cart/quote", CartQuoteView.as_view(), name="cart-quote"),
