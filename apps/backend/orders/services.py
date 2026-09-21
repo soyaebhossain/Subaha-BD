@@ -86,18 +86,23 @@ def checkout(data, user=None):
         row = locked[line["inventory"].pk]
         if row.available < line["qty"]:
             raise CheckoutConflict("Stock changed during checkout. Refresh your cart and retry.")
-        changed = Inventory.objects.filter(pk=row.pk, available__gte=line["qty"]).update(available=F("available") - line["qty"])
-        if changed != 1:
-            raise CheckoutConflict("Stock changed during checkout. Refresh your cart and retry.")
+        row.available -= line["qty"]
         grouped[line["inventory"].outlet_id].append(line)
+    # All affected rows are locked in primary-key order until this transaction commits.
+    # Batch writes avoid a round trip per item/outlet for large split carts.
+    Inventory.objects.bulk_update(list(locked.values()), ["available"])
+    fulfillments = []
     for outlet_id, group in grouped.items():
         subtotal = sum(line["total"] for line in group)
         rate = group[0]["inventory"].outlet.seller.commission_percent
-        fulfillment = Fulfillment.objects.create(order=order, outlet_id=outlet_id, subtotal=subtotal,
-            commission_percent=rate, commission=(subtotal * rate / 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
-        OrderItem.objects.bulk_create([OrderItem(order=order, fulfillment=fulfillment,
-            inventory=line["inventory"], product=line["product"], variant=line["variant"],
-            product_name=line["product"].name_en, qty=line["qty"], price=line["price"], total=line["total"]) for line in group])
+        fulfillments.append(Fulfillment(order=order, outlet_id=outlet_id, subtotal=subtotal,
+            commission_percent=rate, commission=(subtotal * rate / 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)))
+    Fulfillment.objects.bulk_create(fulfillments)
+    fulfillment_by_outlet = {row.outlet_id: row for row in fulfillments}
+    OrderItem.objects.bulk_create([OrderItem(order=order,
+        fulfillment=fulfillment_by_outlet[line["inventory"].outlet_id],
+        inventory=line["inventory"], product=line["product"], variant=line["variant"],
+        product_name=line["product"].name_en, qty=line["qty"], price=line["price"], total=line["total"]) for line in lines])
     StockMovement.objects.bulk_create([StockMovement(inventory=line["inventory"], delta=-line["qty"],
         reason="Checkout allocation", order=order, actor=actor) for line in lines])
     for key in ("subtotal", "discount", "delivery_fee", "total"):

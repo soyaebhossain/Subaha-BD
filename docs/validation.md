@@ -1,8 +1,8 @@
-# Validation record — updated 2026-09-20
+# Validation record — updated 2026-09-21
 
 ## Automated correctness
 
-33 backend tests passed on local PostgreSQL 16 on 2026-09-20. Coverage includes:
+39 backend tests passed on local PostgreSQL 16 on 2026-09-21. Coverage includes:
 
 - Server-side prices, typed input validation, stock shortage and full transaction rollback.
 - Wrong variants, wrong sellers, inactive sellers/outlets and delivery-zone restrictions.
@@ -16,6 +16,9 @@
 - Existing-order migration with distinct UUIDs.
 - Showcase seeding: 8 flagship shops, 64 district outlets, 2,500 demo listings, geography filters,
   production seed rejection and preservation of adjusted stock/audit history on rerun.
+- Bounded query counts for 100-line/100-outlet checkout and API serialization; complete rollback on payment-write failure.
+- Concurrent overlapping multi-outlet carts supplied in opposite item order.
+- Larger load-fixture seeding, rerun preservation and audit rejection of ledger/count mismatches.
 
 Next.js production build and TypeScript checks passed. ESLint passed.
 Browser integration passed on local headless Microsoft Edge: login, seller dashboard, inventory adjustment and reversal,
@@ -64,3 +67,39 @@ Subsequent browser checks add separately labelled synthetic cancelled orders and
 This short test is not evidence of a completed 100,000-order production day. It does not cover large historical tables,
 multi-region networking, external payments/couriers, production failover, sustained peak traffic or long multi-item carts.
 Use the staging acceptance gates in [the capacity plan](marketplace-scale.md) before making a production capacity commitment.
+
+## Mixed carts and hot inventory — 2026-09-21
+
+The isolated capacity stack used the current backend source with Gunicorn 4 workers × 4 threads,
+PostgreSQL 16 and Redis 7. Docker reported 16 available CPUs and 16,726,519,808 bytes of available memory;
+these are local host resources, not a proposed production server size.
+The fixtures contained 2,500 products, 100 outlets and 10 sellers.
+Carts alternated equally between 1, 10 and 100 products; 30% started with the same product.
+Every tenth checkout sent a concurrent identical request. Each iteration also requested a quote;
+catalogue traffic traversed multiple pages. This differs materially from the single-line benchmark above.
+
+| Measurement | Result |
+|---|---:|
+| Duration | 120 seconds |
+| Checkout arrival rate | 25/second |
+| Catalogue arrival rate | 50/second |
+| New orders / distinct keys / payments | 3,000 / 3,000 / 3,000 |
+| Ordered / allocated units | 111,000 / 111,000 |
+| HTTP requests | 12,300 |
+| HTTP failures / failed checks / dropped iterations | 0 / 0 / 0 |
+| Checkout p95 / p99 | 256.42 ms / 335.24 ms |
+| 1-line checkout p95 / p99 | 221.84 ms / 312.98 ms |
+| 10-line checkout p95 / p99 | 223.89 ms / 335.11 ms |
+| 100-line checkout p95 / p99 | 284.03 ms / 341.53 ms |
+| Inventory / payment mismatches | 0 / 0 |
+
+All thresholds passed, including per-cart-size latency thresholds. The read-only audit reconciled
+every load inventory row to its movement ledger and each run order to exactly one payment.
+A preceding 60-second warm-up at 5 orders/second accepted 301 orders and 11,101 units, also reconciled.
+Peak-run figures above exclude warm-up orders; the inventory audit includes all fixture stock movements.
+
+[Machine-readable measurements and source hashes](benchmarks/mixed-carts-2026-09-21.json).
+[Reproduction instructions](../tests/load/README.md).
+
+This provides stronger local evidence for long carts and retries. It still does not prove 100,000 real orders/day:
+24-hour soak, realistic historical tables, external services, failover and production infrastructure remain untested.

@@ -106,6 +106,9 @@ SQLite skips the two row-lock concurrency tests. CI uses PostgreSQL.
 
 ## Load test
 
+For 2,500 products, mixed 1/10/100-line carts, hot-stock contention, concurrent retries and automated ledger checks,
+use the [isolated capacity test stack](tests/load/README.md). The simpler benchmark below remains available.
+
 Only use the **disposable** local `subaha_scale` database. Fixtures are labelled `LOAD TEST` and should not enter your real catalogue.
 
 ```powershell

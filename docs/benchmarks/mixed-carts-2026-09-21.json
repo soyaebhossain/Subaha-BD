@@ -1,0 +1,194 @@
+{
+  "date": "2026-09-21",
+  "environment": {
+    "location": "Local Docker Desktop development machine",
+    "database": "PostgreSQL 16",
+    "cache": "Redis 7",
+    "api": "Gunicorn 4 workers x 4 threads; current source bind mount",
+    "docker_available_cpus": 16,
+    "docker_available_memory_bytes": 16726519808
+  },
+  "workload": {
+    "cart_sizes": [
+      1,
+      10,
+      100
+    ],
+    "hot_percent": 30,
+    "fixture_products": 2500,
+    "label": "mixed-peak-20260921",
+    "outlets": 100,
+    "sellers": 10,
+    "duration_seconds": 120,
+    "order_arrivals_per_second": 25,
+    "catalogue_arrivals_per_second": 50,
+    "concurrent_retry_percent": 10
+  },
+  "metrics": {
+    "created_orders": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 3000,
+        "rate": 24.966554002415872
+      }
+    },
+    "ordered_units": {
+      "contains": "default",
+      "values": {
+        "count": 111000,
+        "rate": 923.7624980893872
+      },
+      "type": "counter"
+    },
+    "http_reqs": {
+      "values": {
+        "count": 12300,
+        "rate": 102.36287140990507
+      },
+      "type": "counter",
+      "contains": "default"
+    },
+    "http_req_failed": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "fails": 12300,
+        "rate": 0,
+        "passes": 0
+      },
+      "thresholds": {
+        "rate<0.01": {
+          "ok": true
+        }
+      }
+    },
+    "checks": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 1,
+        "passes": 15300,
+        "fails": 0
+      },
+      "thresholds": {
+        "rate>0.99": {
+          "ok": true
+        }
+      }
+    },
+    "dropped_iterations": {
+      "values": {
+        "count": 0,
+        "rate": 0
+      },
+      "thresholds": {
+        "count==0": {
+          "ok": true
+        }
+      },
+      "type": "counter",
+      "contains": "default"
+    },
+    "http_req_duration{name:checkout}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 116.48386350233348,
+        "min": 19.472063,
+        "med": 109.89519100000001,
+        "max": 588.248973,
+        "p(90)": 213.61010019999998,
+        "p(95)": 256.41540024999995,
+        "p(99)": 335.2418117599994
+      },
+      "thresholds": {
+        "p(99)<2000": {
+          "ok": true
+        },
+        "p(95)<1000": {
+          "ok": true
+        }
+      }
+    },
+    "http_req_duration{name:checkout,cart_size:1}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(90)": 176.68332070000002,
+        "p(95)": 221.84271884999998,
+        "p(99)": 312.98176573,
+        "avg": 99.494550879,
+        "min": 19.472063,
+        "med": 86.891997,
+        "max": 511.768534
+      },
+      "thresholds": {
+        "p(95)<1000": {
+          "ok": true
+        },
+        "p(99)<2000": {
+          "ok": true
+        }
+      }
+    },
+    "http_req_duration{name:checkout,cart_size:10}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "min": 27.698138,
+        "med": 56.9738615,
+        "max": 588.248973,
+        "p(90)": 180.74037000000004,
+        "p(95)": 223.89103845,
+        "p(99)": 335.10854143999995,
+        "avg": 85.31471707600002
+      },
+      "thresholds": {
+        "p(95)<1000": {
+          "ok": true
+        },
+        "p(99)<2000": {
+          "ok": true
+        }
+      }
+    },
+    "http_req_duration{name:checkout,cart_size:100}": {
+      "values": {
+        "med": 146.8980775,
+        "max": 540.547357,
+        "p(90)": 249.7385006,
+        "p(95)": 284.0264881499999,
+        "p(99)": 341.52853318999996,
+        "avg": 164.64232255200005,
+        "min": 98.770982
+      },
+      "thresholds": {
+        "p(95)<1000": {
+          "ok": true
+        },
+        "p(99)<2000": {
+          "ok": true
+        }
+      },
+      "type": "trend",
+      "contains": "time"
+    }
+  },
+  "audit": {
+    "orders": 3000,
+    "distinct_keys": 3000,
+    "payments": 3000,
+    "units": 111000,
+    "allocated_units": 111000,
+    "stock_mismatches": 0,
+    "payment_mismatches": 0,
+    "orders_without_one_payment": 0
+  },
+  "source_sha256": {
+    "apps/backend/orders/services.py": "dd83799bd6b20a39b141a228388f5511d910f1112e073130c1726692d6a33f6f",
+    "apps/backend/orders/views.py": "0c552c807c7e9208a2f1b8ab3645aed5a0ef6a06b8ce3b5bd12097d05e5d2241",
+    "tests/load/marketplace.js": "e0e0f84248b9757f169cd2e087a60478ad4c2d7560335ca571bb2643c47576b6"
+  },
+  "limitations": "Short synthetic local benchmark; no production daily-capacity claim, WAN, external integrations, historical-data scale, failover or soak coverage."
+}

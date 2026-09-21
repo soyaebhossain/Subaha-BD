@@ -1,4 +1,5 @@
 from decimal import Decimal
+from django.db.models import prefetch_related_objects
 
 from rest_framework import permissions, viewsets
 from rest_framework.response import Response
@@ -8,6 +9,9 @@ from .models import Order
 from .serializers import CartQuoteSerializer, OrderCreateSerializer, OrderSerializer
 from .services import plan_cart
 from common.pagination import CatalogPagination
+
+
+ORDER_PREFETCH = ("items__variant", "fulfillments__outlet__seller", "fulfillments__items__variant")
 
 
 class CartQuoteView(APIView):
@@ -28,6 +32,7 @@ class CheckoutCreateOrderView(APIView):
         serializer = OrderCreateSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         order = serializer.save()
+        prefetch_related_objects([order], *ORDER_PREFETCH)
         return Response(OrderSerializer(order).data, status=201 if serializer.was_created else 200)
 
 
@@ -37,6 +42,4 @@ class MyOrdersViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Order.objects.filter(user=self.request.user).prefetch_related(
-            "items__variant", "fulfillments__outlet__seller", "fulfillments__items__variant"
-        ).order_by("-created_at", "-id")
+        return Order.objects.filter(user=self.request.user).prefetch_related(*ORDER_PREFETCH).order_by("-created_at", "-id")

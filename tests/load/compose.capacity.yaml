@@ -1,0 +1,52 @@
+name: subaha-capacity-local
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: subaha_capacity
+      POSTGRES_USER: subaha
+      POSTGRES_PASSWORD: capacity-local-only
+    ports: ["127.0.0.1:15432:5432"]
+    volumes: ["capacity_data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U subaha -d subaha_capacity"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  redis:
+    image: redis:7-alpine
+  api:
+    image: subaha-bd-local-api:latest
+    build: ../../apps/backend
+    # Run current checkout even when reusing the existing local dependency image.
+    volumes: ["../../apps/backend:/app"]
+    environment:
+      DEBUG: "1"
+      DATABASE_URL: postgres://subaha:capacity-local-only@postgres:5432/subaha_capacity
+      REDIS_URL: redis://redis:6379/0
+      ALLOWED_HOSTS: api,localhost,127.0.0.1
+      CHECKOUT_RATE: "100000/min"
+    command: ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "4", "--threads", "4", "--timeout", "30"]
+    ports: ["127.0.0.1:18001:8000"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+  k6:
+    profiles: ["test"]
+    image: grafana/k6:1.6.1
+    volumes: [".:/scripts", ".:/results"]
+    environment:
+      ALLOW_LOAD_TEST: "1"
+      BASE_URL: http://api:8000
+      FIXTURES: /scripts/capacity-fixtures.local.json
+      ORDER_RATE: ${ORDER_RATE:-5}
+      BROWSE_RATE: ${BROWSE_RATE:-10}
+      DURATION: ${DURATION:-2m}
+      CART_SIZES: ${CART_SIZES:-1,10,100}
+      HOT_PERCENT: ${HOT_PERCENT:-30}
+      RUN_LABEL: ${RUN_LABEL:-capacity-local}
+    command: ["run", "/scripts/marketplace.js"]
+volumes:
+  capacity_data:

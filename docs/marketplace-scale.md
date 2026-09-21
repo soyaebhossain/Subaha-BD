@@ -54,6 +54,13 @@ Also complete admin MFA, credential/session lifecycle, COD fraud/phone verificat
 
 ## Acceptance gates for 100,000 orders/day
 
+Large-cart checkout now batches stock updates, fulfillment inserts and line inserts after acquiring all stock locks
+in primary-key order. The API prefetches nested order/fulfillment data before serialization.
+The 100-product/100-outlet regression fixture uses 16 service queries (previously 313) and 21 queries including
+API response serialization on PostgreSQL, matching the one-product query counts in that fixture.
+This reduces database round trips; it is not a proportional latency or throughput guarantee.
+See [mixed-cart test instructions](../tests/load/README.md) for a larger catalogue, concurrent retries and ledger reconciliation.
+
 1. Import representative catalogue size, seller distribution and historical order volume into staging.
 2. Measure a realistic browsing/search/quote/order/staff mix. Include 1-, 10- and 100-line carts, hot products, low stock, retries, cancellations and seller filtering.
 3. Sustain the expected peak (initial candidate: 25 orders/sec), then spike above it. Run a 24-hour soak and verify database growth, autovacuum, index sizes, p95/p99 latency, lock waits and memory.

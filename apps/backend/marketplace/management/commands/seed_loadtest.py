@@ -14,6 +14,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--outlets", type=int, default=100)
+        parser.add_argument("--products", type=int, default=None, help="Defaults to one product per outlet; supports larger catalogue benchmarks.")
         parser.add_argument("--output", required=True)
 
     @transaction.atomic
@@ -23,14 +24,18 @@ class Command(BaseCommand):
         count = options["outlets"]
         if not 1 <= count <= 100:
             raise CommandError("Choose between 1 and 100 outlets.")
+        product_count = options["products"] if options["products"] is not None else count
+        if not count <= product_count <= 10000:
+            raise CommandError("Product count must be between the outlet count and 10,000.")
         rows = []
-        for index in range(count):
-            seller_index = index // 10
+        for index in range(product_count):
+            outlet_index = index % count
+            seller_index = outlet_index // 10
             seller, _ = Seller.objects.get_or_create(slug=f"loadtest-seller-{seller_index}", defaults={
                 "name": f"LOAD TEST Seller {seller_index}", "kind": "owned" if seller_index == 0 else "franchise",
                 "is_active": True, "commission_percent": 10})
-            outlet, _ = Outlet.objects.get_or_create(code=f"loadtest-outlet-{index}", defaults={
-                "name": f"LOAD TEST Outlet {index}", "seller": seller, "zone": "dhaka", "city": "Dhaka", "is_active": True})
+            outlet, _ = Outlet.objects.get_or_create(code=f"loadtest-outlet-{outlet_index}", defaults={
+                "name": f"LOAD TEST Outlet {outlet_index}", "seller": seller, "zone": "dhaka", "city": "Dhaka", "is_active": True})
             product, _ = Product.objects.get_or_create(slug=f"loadtest-product-{index}", defaults={
                 "name_en": f"LOAD TEST Product {index}", "seller": seller, "base_price": 100})
             stock, created = Inventory.objects.get_or_create(outlet=outlet, product=product, defaults={"available": 1000000})
@@ -40,4 +45,4 @@ class Command(BaseCommand):
         output = Path(options["output"])
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(json.dumps(rows, indent=2), encoding="utf-8")
-        self.stdout.write(self.style.SUCCESS(f"Prepared {count} synthetic outlets; fixture IDs written to {output}."))
+        self.stdout.write(self.style.SUCCESS(f"Prepared {count} synthetic outlets and {product_count} products; fixture IDs written to {output}."))
