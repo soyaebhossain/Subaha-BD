@@ -3,6 +3,7 @@ import os
 import secrets
 import sys
 from pathlib import Path
+from urllib.parse import quote
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "apps/backend"))
@@ -11,6 +12,7 @@ import django
 django.setup()
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.db.models import Avg, Count
 from catalog.models import Product, ProductFeedback
 from rest_framework_simplejwt.tokens import RefreshToken
 from playwright.sync_api import sync_playwright, expect
@@ -25,6 +27,7 @@ try:
     for name in ("Browser Customer", "Sample Reviewer"):
         users.append(get_user_model().objects.create_user(email=f"interaction-{secrets.token_hex(6)}@example.test", name=name))
     ProductFeedback.objects.create(product=product, user=users[1], kind="review", rating=4, body="Sample review for the browser check.", status="approved")
+    rating = ProductFeedback.objects.filter(product=product, kind="review", status="approved").aggregate(average=Avg("rating"), count=Count("id"))
     token = str(RefreshToken.for_user(users[0]).access_token)
     output = ROOT / "test-results"
     output.mkdir(exist_ok=True)
@@ -33,6 +36,14 @@ try:
         browser = playwright.chromium.launch(channel="msedge", headless=True)
         page = browser.new_page(viewport={"width": 1440, "height": 1000})
         page.on("pageerror", lambda error: errors.append(str(error)))
+        page.goto(f"http://localhost:3000/products?search={quote(product.name_en)}&check={secrets.token_hex(4)}")
+        card = page.locator(".product-card").first
+        expect(card.locator(".card-rating")).to_have_attribute("aria-label", f'{rating["average"]:.1f} out of 5 stars from {rating["count"]} reviews')
+        expect(card.locator(".card-stars-fill")).to_have_text("\u2605" * 5)
+        card.screenshot(path=str(output / "product-card-rating.png"))
+        page.set_viewport_size({"width": 390, "height": 844})
+        assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
+        page.set_viewport_size({"width": 1440, "height": 1000})
         page.goto(f"http://localhost:3000/products/{product.slug}")
         stage = page.locator(".gallery-stage")
         expect(stage).to_be_visible(timeout=30000)

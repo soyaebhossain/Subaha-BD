@@ -1,9 +1,10 @@
 from rest_framework import filters, permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.db.models import Prefetch, Sum, Q, F
+from django.db.models import Prefetch, Sum, Q, F, Avg, Count, OuterRef, Subquery, Value
+from django.db.models.functions import Coalesce
 
-from .models import Category, Product, ProductVariant
+from .models import Category, Product, ProductVariant, ProductFeedback
 from common.pagination import CatalogPagination
 from .serializers import (
     CategorySerializer,
@@ -40,6 +41,11 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         qs = super().get_queryset()
+        ratings = ProductFeedback.objects.filter(product_id=OuterRef("pk"), kind="review", status="approved").order_by().values("product_id")
+        qs = qs.annotate(
+            rating_average=Subquery(ratings.annotate(value=Avg("rating")).values("value")),
+            review_count=Coalesce(Subquery(ratings.annotate(value=Count("id")).values("value")), Value(0)),
+        )
         category = self.request.query_params.get("category")
         if category:
             qs = qs.filter(category__slug=category)

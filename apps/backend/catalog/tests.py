@@ -85,3 +85,19 @@ class ProductFeedbackTests(TestCase):
             ProductFeedback.objects.create(product=self.product, user=self.user, kind="review", rating=4, body="Duplicate")
         with self.assertRaises(IntegrityError), transaction.atomic():
             ProductFeedback.objects.create(product=self.product, user=self.other, kind="review", rating=None, body="Invalid")
+
+    def test_catalogue_rating_uses_only_approved_reviews(self):
+        ProductFeedback.objects.create(product=self.product, user=self.user, kind="review", rating=5, body="Approved", status="approved")
+        pending = ProductFeedback.objects.create(product=self.product, user=self.other, kind="review", rating=2, body="Pending")
+        ProductFeedback.objects.create(product=self.product, user=self.other, kind="comment", body="A comment", status="approved")
+        url = f"/api/v1/products/{self.product.slug}/"
+        self.assertEqual(self.client.get(url).data["rating_average"], 5)
+        self.assertEqual(self.client.get(url).data["review_count"], 1)
+        pending.status = "approved"
+        pending.save(update_fields=["status"])
+        response = self.client.get("/api/v1/products/", {"search": "Rice"}).data["results"][0]
+        self.assertEqual(response["rating_average"], 3.5)
+        self.assertEqual(response["review_count"], 2)
+        unrated = self.client.get("/api/v1/products/", {"search": "Oil"}).data["results"][0]
+        self.assertIsNone(unrated["rating_average"])
+        self.assertEqual(unrated["review_count"], 0)

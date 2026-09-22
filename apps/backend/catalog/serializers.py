@@ -34,6 +34,8 @@ class ProductVariantSerializer(serializers.ModelSerializer):
 
 
 class ProductListSerializer(serializers.ModelSerializer):
+    rating_average = serializers.FloatField(read_only=True, allow_null=True)
+    review_count = serializers.IntegerField(read_only=True)
     seller_name = serializers.CharField(source="seller.name", read_only=True, default="")
     category = CategorySerializer(read_only=True)
     variants = ProductVariantSerializer(many=True, read_only=True)
@@ -44,6 +46,8 @@ class ProductListSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "is_demo",
+            "rating_average",
+            "review_count",
             "seller_name",
             "category",
             "name_en",

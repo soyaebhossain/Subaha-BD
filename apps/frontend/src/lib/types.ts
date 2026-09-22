@@ -29,6 +29,8 @@ export interface ProductVariant {
 }
 
 export interface Product {
+  rating_average?: number | null;
+  review_count?: number;
   is_demo?: boolean;
   seller_name?: string;
   id: number;
