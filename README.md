@@ -141,6 +141,29 @@ Synthetic audit records remain; screenshots are saved under ignored `test-result
 
 ## API changes
 
+### Product images, reviews and comments
+
+Product detail images support double-click 2× zoom, pointer drag, Ctrl-drag 3D tilt and reset.
+When zoomed, a normal drag pans the image. On touch screens, enable **3D tilt** before dragging;
+ordinary unzoomed touch gestures still scroll the page. Enter toggles zoom, arrow keys tilt and Escape resets.
+This is a perspective effect on an image or demo illustration, not a real 360° product model.
+
+`GET/POST /api/v1/products/{slug}/reviews/` and `/comments/` power the separate feedback tabs.
+Guests can read approved feedback; authenticated customers can submit it (10 writes/hour/user across both types).
+Reviews require 1–5 stars; each account has one review per product and can update it.
+Comments do not have star ratings. All new or edited feedback awaits moderation, and only approved reviews
+contribute to the average/distribution. Review owners can see their own moderation status.
+Public author labels use a first name, never the account email field. Feedback is rendered as plain text.
+
+Platform superusers moderate at `/admin/catalog/productfeedback/`, using **Approve selected feedback** or **Reject selected feedback**.
+The **Verified purchase** badge is calculated on submission from an authenticated customer's delivered order item;
+clients cannot set it. No fake reviews are seeded.
+
+Optional local demo browser check: `python tests/product_interaction_smoke.py` with `DEBUG=1`, SQLite API on 8000,
+Next.js on 3000 and Playwright/Edge installed. It removes its temporary accounts and feedback after the test.
+
+### Checkout and operations
+
 - `POST /api/v1/checkout/create-order` requires a UUID `checkout_key`, `customer`, `address`, non-empty `items`, `zone`, `delivery_time` and `payment_method: "cod"`.
 - Repeating the same key and validated payload returns the original order (200); changed payload or user returns 409. New orders return 201.
 - Quote and checkout prices come from the database. At most 100 lines and 100 units per product/variant are accepted.

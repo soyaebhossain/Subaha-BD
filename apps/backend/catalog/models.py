@@ -1,4 +1,6 @@
 from django.db import models
+from django.conf import settings
+from django.db.models import Q
 
 from common.models import TimestampedModel
 
@@ -59,3 +61,21 @@ class ProductImage(TimestampedModel):
 
     def __str__(self) -> str:
         return self.image.url if self.image else ""
+
+
+class ProductFeedback(TimestampedModel):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="feedback")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    kind = models.CharField(max_length=10, choices=[("review", "Review"), ("comment", "Comment")])
+    rating = models.PositiveSmallIntegerField(null=True, blank=True)
+    body = models.TextField(max_length=2000)
+    status = models.CharField(max_length=10, default="pending", choices=[("pending", "Pending"), ("approved", "Approved"), ("rejected", "Rejected")])
+    verified_purchase = models.BooleanField(default=False, editable=False)
+
+    class Meta:
+        ordering = ("-created_at", "-id")
+        indexes = [models.Index(fields=["product", "kind", "status", "-created_at"])]
+        constraints = [
+            models.UniqueConstraint(fields=["product", "user"], condition=Q(kind="review"), name="one_product_review_per_user"),
+            models.CheckConstraint(condition=(Q(kind="review", rating__isnull=False, rating__gte=1, rating__lte=5) | Q(kind="comment", rating__isnull=True)), name="feedback_rating_matches_kind"),
+        ]

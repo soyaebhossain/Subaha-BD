@@ -7,6 +7,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from accounts.views import AddressViewSet, MeView, RegisterView, LoginView
 from catalog.views import CategoryViewSet, ProductViewSet
+from catalog.feedback import ProductFeedbackView
 from cms.views import BannerViewSet, PageViewSet
 from orders.views import CartQuoteView, CheckoutCreateOrderView, MyOrdersViewSet
 from marketplace.views import OutletViewSet, OperationsOutletViewSet, InventoryViewSet, FulfillmentViewSet, OverviewView
@@ -35,6 +36,8 @@ router.register(r"my/orders", MyOrdersViewSet, basename="my-orders")
 router.register(r"addresses", AddressViewSet, basename="address")
 
 urlpatterns = [
+    path("api/v1/products/<slug:slug>/reviews/", ProductFeedbackView.as_view(kind="review")),
+    path("api/v1/products/<slug:slug>/comments/", ProductFeedbackView.as_view(kind="comment")),
     path("health/live", live),
     path("health/ready", ready),
     path("api/v1/operations/overview", OverviewView.as_view()),

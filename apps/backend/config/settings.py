@@ -129,7 +129,7 @@ CACHES = {"default": {"BACKEND": "django.core.cache.backends.redis.RedisCache", 
     "default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}
 }
 REST_FRAMEWORK["DEFAULT_THROTTLE_CLASSES"] = ["rest_framework.throttling.ScopedRateThrottle"]
-REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {"checkout": os.getenv("CHECKOUT_RATE", "120/min"), "auth": "30/min"}
+REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {"checkout": os.getenv("CHECKOUT_RATE", "120/min"), "auth": "30/min", "feedback": "10/hour"}
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
 SECURE_SSL_REDIRECT = not DEBUG

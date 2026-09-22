@@ -1,8 +1,8 @@
-# Validation record — updated 2026-09-21
+# Validation record — updated 2026-09-22
 
 ## Automated correctness
 
-39 backend tests passed on local PostgreSQL 16 on 2026-09-21. Coverage includes:
+45 backend tests passed on local PostgreSQL 16 on 2026-09-22. Coverage includes:
 
 - Server-side prices, typed input validation, stock shortage and full transaction rollback.
 - Wrong variants, wrong sellers, inactive sellers/outlets and delivery-zone restrictions.
@@ -19,6 +19,12 @@
 - Bounded query counts for 100-line/100-outlet checkout and API serialization; complete rollback on payment-write failure.
 - Concurrent overlapping multi-outlet carts supplied in opposite item order.
 - Larger load-fixture seeding, rerun preservation and audit rejection of ledger/count mismatches.
+- Product reviews/comments: authenticated writes, pending/approved visibility, owner isolation, rating validation,
+  one review per customer/product, moderation reset on edits, delivered-purchase verification and write throttling.
+
+Product interaction browser checks passed on 2026-09-22: double-click zoom, Ctrl-drag tilt, keyboard/reset,
+touch drag with tilt enabled, responsive layout, approved review display, review submission/editing and comments.
+Temporary test accounts and feedback were removed. Frontend ESLint and production build passed.
 
 Next.js production build and TypeScript checks passed. ESLint passed.
 Browser integration passed on local headless Microsoft Edge: login, seller dashboard, inventory adjustment and reversal,

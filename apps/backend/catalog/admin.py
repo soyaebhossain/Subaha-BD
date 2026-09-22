@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Category, Product, ProductImage, ProductVariant
+from .models import Category, Product, ProductImage, ProductVariant, ProductFeedback
 from marketplace.admin import PlatformAdmin
 
 
@@ -34,3 +34,23 @@ class CategoryAdmin(admin.ModelAdmin):
 
 admin.site.register(ProductVariant)
 admin.site.register(ProductImage)
+
+
+@admin.register(ProductFeedback)
+class ProductFeedbackAdmin(PlatformAdmin):
+    list_display = ("product", "user", "kind", "rating", "status", "verified_purchase", "created_at")
+    list_filter = ("kind", "status", "rating", "verified_purchase")
+    search_fields = ("product__name_en", "body", "user__name")
+    readonly_fields = ("product", "user", "kind", "rating", "body", "verified_purchase", "created_at", "updated_at")
+    actions = ("approve", "reject")
+
+    def has_add_permission(self, request):
+        return False
+
+    @admin.action(description="Approve selected feedback")
+    def approve(self, request, queryset):
+        queryset.update(status="approved")
+
+    @admin.action(description="Reject selected feedback")
+    def reject(self, request, queryset):
+        queryset.update(status="rejected")
