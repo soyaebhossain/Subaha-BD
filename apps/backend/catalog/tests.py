@@ -101,3 +101,36 @@ class ProductFeedbackTests(TestCase):
         unrated = self.client.get("/api/v1/products/", {"search": "Oil"}).data["results"][0]
         self.assertIsNone(unrated["rating_average"])
         self.assertEqual(unrated["review_count"], 0)
+
+
+class ProductPriceRangeTests(TestCase):
+    def setUp(self):
+        data = fixtures()
+        self.product = data[4]
+        self.client = APIClient()
+
+    def test_full_range_includes_both_extremes_and_variant_price(self):
+        response = self.client.get("/api/v1/products/").data
+        self.assertEqual(response["count"], 2)
+        self.assertEqual(response["price_range"]["minimum"], 105)
+        self.assertEqual(response["price_range"]["maximum"], 200)
+        limited = self.client.get("/api/v1/products/", {"price_to": 50}).data
+        self.assertEqual(limited["count"], 1)
+        self.assertEqual(limited["results"][0]["id"], self.product.pk)
+        self.assertEqual(limited["price_range"]["maximum"], 200)
+        upper = self.client.get("/api/v1/products/", {"price_from": 100}).data
+        self.assertEqual(upper["count"], 1)
+        self.assertEqual(upper["results"][0]["name_en"], "Oil")
+
+    def test_bounds_follow_search_and_empty_or_single_price_is_valid(self):
+        single = self.client.get("/api/v1/products/", {"search": "Rice", "price_from": 25, "price_to": 75}).data
+        self.assertEqual(single["count"], 1)
+        self.assertEqual(single["price_range"]["selected_min"], 105)
+        self.assertEqual(single["price_range"]["selected_max"], 105)
+        empty = self.client.get("/api/v1/products/", {"search": "nonexistent"}).data
+        self.assertEqual(empty["count"], 0)
+        self.assertIsNone(empty["price_range"]["minimum"])
+
+    def test_invalid_percentages_are_rejected(self):
+        for selection in ({"price_from": 0}, {"price_to": 101}, {"price_to": "NaN"}, {"price_from": 80, "price_to": 20}):
+            self.assertEqual(self.client.get("/api/v1/products/", selection).status_code, 400)

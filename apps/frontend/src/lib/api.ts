@@ -14,6 +14,7 @@ import {
 type FetchOptions = RequestInit & { token?: string };
 
 export interface Page<T> { count: number; next: string | null; previous: string | null; results: T[] }
+export interface PriceRange { minimum: number | string | null; maximum: number | string | null; selected_min: number | string | null; selected_max: number | string | null; from_percent: number; to_percent: number }
 
 export async function requestJSON<T>(path: string, { token, headers, ...init }: FetchOptions = {}): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
@@ -69,6 +70,8 @@ export async function getContentPage(slug: string) {
 }
 
 export interface GetProductsParams {
+  price_from?: string;
+  price_to?: string;
   page?: string;
   page_size?: string;
   search?: string;
@@ -95,7 +98,7 @@ export async function getProductPage(params: GetProductsParams = {}) {
 
   const qs = query.toString();
   const path = qs ? `/api/v1/products/?${qs}` : "/api/v1/products/";
-  return fetchJSON<Page<Product>>(path);
+  return fetchJSON<Page<Product> & { price_range: PriceRange }>(path);
 }
 
 export async function getProduct(slug: string) {

@@ -1,7 +1,8 @@
-from rest_framework import filters, permissions, viewsets
+from decimal import Decimal, ROUND_FLOOR, ROUND_CEILING
+from rest_framework import filters, permissions, viewsets, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.db.models import Prefetch, Sum, Q, F, Avg, Count, OuterRef, Subquery, Value
+from django.db.models import Prefetch, Sum, Q, F, Avg, Count, OuterRef, Subquery, Value, Min, Max, DecimalField, ExpressionWrapper
 from django.db.models.functions import Coalesce
 
 from .models import Category, Product, ProductVariant, ProductFeedback
@@ -20,10 +21,20 @@ class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
     lookup_field = "slug"
 
 
+class PriceRangeInput(serializers.Serializer):
+    price_from = serializers.IntegerField(min_value=1, max_value=100, default=1)
+    price_to = serializers.IntegerField(min_value=1, max_value=100, default=100)
+
+    def validate(self, attrs):
+        if attrs["price_from"] > attrs["price_to"]:
+            raise serializers.ValidationError("Minimum price percentage cannot exceed maximum.")
+        return attrs
+
+
 class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     pagination_class = CatalogPagination
     queryset = Product.objects.filter(is_active=True, seller__is_active=True).select_related("category", "seller").prefetch_related(
-        Prefetch("variants", queryset=ProductVariant.objects.filter(is_active=True).annotate(outlet_stock=Sum("inventory__available",
+        Prefetch("variants", queryset=ProductVariant.objects.filter(is_active=True).order_by("-created_at", "-pk").annotate(outlet_stock=Sum("inventory__available",
             filter=Q(inventory__outlet__is_active=True, inventory__outlet__seller__is_active=True,
                 inventory__outlet__seller_id=F("product__seller_id")), default=0))), "images"
     ).order_by("-created_at", "-id")
@@ -41,6 +52,9 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         qs = super().get_queryset()
+        first_variant = ProductVariant.objects.filter(product_id=OuterRef("pk"), is_active=True).order_by("-created_at", "-pk")
+        qs = qs.annotate(listing_price=ExpressionWrapper(F("base_price") + Coalesce(
+            Subquery(first_variant.values("extra_price")[:1]), Value(Decimal("0"))), output_field=DecimalField(max_digits=12, decimal_places=2)))
         ratings = ProductFeedback.objects.filter(product_id=OuterRef("pk"), kind="review", status="approved").order_by().values("product_id")
         qs = qs.annotate(
             rating_average=Subquery(ratings.annotate(value=Avg("rating")).values("value")),
@@ -60,3 +74,26 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
         if ordering:
             qs = qs.order_by(ordering, "-id")
         return qs
+
+    def filter_queryset(self, queryset):
+        qs = super().filter_queryset(queryset)
+        if self.action != "list":
+            return qs
+        selection = PriceRangeInput(data=self.request.query_params)
+        selection.is_valid(raise_exception=True)
+        lower, upper = selection.validated_data["price_from"], selection.validated_data["price_to"]
+        bounds = qs.aggregate(minimum=Min("listing_price"), maximum=Max("listing_price"))
+        minimum, maximum = bounds["minimum"], bounds["maximum"]
+        self.price_range = {**bounds, "from_percent": lower, "to_percent": upper, "selected_min": None, "selected_max": None}
+        if minimum is not None:
+            span = maximum - minimum
+            start = (minimum + span * Decimal(lower - 1) / 99).quantize(Decimal("0.01"), rounding=ROUND_FLOOR)
+            end = (minimum + span * Decimal(upper - 1) / 99).quantize(Decimal("0.01"), rounding=ROUND_CEILING)
+            self.price_range.update(selected_min=start, selected_max=end)
+            qs = qs.filter(listing_price__gte=start, listing_price__lte=end)
+        return qs
+
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        response.data["price_range"] = self.price_range
+        return response

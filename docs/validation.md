@@ -26,6 +26,12 @@ Product interaction browser checks passed on 2026-09-22: double-click zoom, Ctrl
 touch drag with tilt enabled, responsive layout, approved review display, review submission/editing and comments.
 Temporary test accounts and feedback were removed. Frontend ESLint and production build passed.
 
+Later targeted catalogue checks on 2026-09-22: all 10 catalogue tests passed on PostgreSQL and SQLite,
+including approved-only card ratings and percentage price filtering with variant prices, stable pre-filter bounds,
+empty/equal-price results and invalid input rejection. The range-slider browser check passed mouse dragging,
+keyboard control, bound clamping, actual API filtering, URL/reload persistence, reset and mobile overflow checks.
+The updated frontend passed ESLint and production build.
+
 Next.js production build and TypeScript checks passed. ESLint passed.
 Browser integration passed on local headless Microsoft Edge: login, seller dashboard, inventory adjustment and reversal,
 mobile overflow check, quote, COD checkout, fulfillment cancellation and no uncaught JavaScript errors.

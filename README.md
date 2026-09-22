@@ -143,6 +143,14 @@ Synthetic audit records remain; screenshots are saved under ignored `test-result
 
 ### Product images, reviews and comments
 
+Catalogue price filtering uses two 1–100% slider handles instead of a price-sort dropdown.
+Within the current search/category selection, 1% maps to the lowest listing price and 100% to the highest;
+the interface also shows the selected BDT amounts. Apply saves `price_from`/`price_to` in the URL and resets pagination.
+Bounds remain based on the matching catalogue before price filtering, so narrowing a range does not move the scale.
+Listing prices include the first active variant's extra price, matching the card's default displayed price.
+Invalid/reversed percentages are rejected; empty catalogues and equal-price catalogues are supported.
+`python tests/price_range_smoke.py` checks dragging, keyboard input, filtering, persistence and mobile layout locally.
+
 Product detail images support double-click 2× zoom, pointer drag, Ctrl-drag 3D tilt and reset.
 When zoomed, a normal drag pans the image. On touch screens, enable **3D tilt** before dragging;
 ordinary unzoomed touch gestures still scroll the page. Enter toggles zoom, arrow keys tilt and Escape resets.
